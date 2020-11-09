@@ -19,9 +19,8 @@
     },
     "XFUploadFile.Server": {
       "commandName": "Project",
-      "launchBrowser": true,
       "launchUrl": "weatherforecast",
-      "applicationUrl": "https://localhost:6234;http://localhost:3276",
+      "applicationUrl": "http://0.0.0.0:3276",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
