@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Logging;
 
 namespace XFUploadFile.Server.Controllers
@@ -11,7 +13,9 @@ namespace XFUploadFile.Server.Controllers
     [ApiController]
     [Route("[controller]")]
     public class UploadFileController : ControllerBase
-    { 
+    {
+        CloudStorageAccount cloudStorageAccount = CloudStorageAccount.Parse("<Your Connection String Here>");
+
         private readonly ILogger<UploadFileController> _logger;
         private readonly IWebHostEnvironment _environment;
 
@@ -41,6 +45,8 @@ namespace XFUploadFile.Server.Controllers
                         using (var memoryStream = new MemoryStream())
                         {
                             await file.CopyToAsync(memoryStream);   System.IO.File.WriteAllBytes(Path.Combine(filePath, file.FileName), memoryStream.ToArray());
+
+                            await UploadToAzureAsync(file);
                         }
 
                         return Ok();
@@ -54,6 +60,23 @@ namespace XFUploadFile.Server.Controllers
             }
 
             return BadRequest();
+        }
+
+        private async Task UploadToAzureAsync(IFormFile file)
+        {
+            var cloudBlobClient = cloudStorageAccount.CreateCloudBlobClient();
+
+            var cloudBlobContainer = cloudBlobClient.GetContainerReference("testcontainer");
+
+            if (await cloudBlobContainer.CreateIfNotExistsAsync())
+            {
+                await cloudBlobContainer.SetPermissionsAsync(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Off });
+            }
+
+            var cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(file.FileName);
+            cloudBlockBlob.Properties.ContentType = file.ContentType;
+
+            await cloudBlockBlob.UploadFromStreamAsync(file.OpenReadStream());
         }
     }
 }
